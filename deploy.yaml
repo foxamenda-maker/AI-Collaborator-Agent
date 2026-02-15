@@ -1,3 +1,5 @@
+# Ensure the deployment manifest used by kustomize includes resource requests
+# that meet GKE Autopilot's minimums.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -12,11 +14,26 @@ spec:
       labels:
         app: ai-collaborator-pod
     spec:
+      # --- COST OPTIMIZATION: ADDING SPOT PODS ---
+      # This requests GKE Autopilot to schedule the Pod on Spot VMs, 
+      # which are up to 90% cheaper for fault-tolerant workloads.
+      nodeSelector:
+        cloud.google.com/gke-spot: "true"
       containers:
       - name: ai-collaborator-container
-        image: gcr.io/PROJECT_ID/IMAGE:TAG
+        image: gcr.io/PROJECT_ID/IMAGE:TAG # Kustomize updates this line
         ports:
         - containerPort: 80
+        # --- AUTOPILOT RESOURCE OPTIMIZATION ---
+        # Setting requests and limits to the Autopilot minimum floor to 
+        # ensure the lowest possible cost for your low-usage application.
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "250m"
+            memory: "512Mi"
         env:
         - name: DATABRICKS_TOKEN
           valueFrom:
